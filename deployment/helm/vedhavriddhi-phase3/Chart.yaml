@@ -1,0 +1,33 @@
+apiVersion: v2
+name: vedhavriddhi-phase3
+description: VedhaVriddhi Phase 3 Global Trading Platform
+type: application
+version: 3.0.0
+appVersion: 3.0.0
+home: https://vedhavriddhi.com
+sources:
+  - https://github.com/vedhavriddhi/platform
+maintainers:
+  - name: VedhaVriddhi Team
+    email: engineering@vedhavriddhi.com
+dependencies:
+  - name: postgresql
+    version: 12.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 17.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: mongodb
+    version: 13.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: mongodb.enabled
+keywords:
+  - trading
+  - finance
+  - blockchain
+  - ai
+  - global
+annotations:
+  category: Financial Services
