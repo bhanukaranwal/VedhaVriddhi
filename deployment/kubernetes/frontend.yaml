@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vedhavriddhi-frontend
+  labels:
+    app: vedhavriddhi-frontend
+    version: v2.0.0
+    component: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vedhavriddhi-frontend
+  template:
+    metadata:
+      labels:
+        app: vedhavriddhi-frontend
+        version: v2.0.0
+        component: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: vedhavriddhi/frontend:2.0.0
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: REACT_APP_API_URL
+          value: "https://api.vedhavriddhi.com"
+        - name: REACT_APP_ANALYTICS_URL
+          value: "https://analytics.vedhavriddhi.com"
+        - name: REACT_APP_RISK_URL
+          value: "https://risk.vedhavriddhi.com"
+        - name: REACT_APP_COMPLIANCE_URL
+          value: "https://compliance.vedhavriddhi.com"
+        - name: REACT_APP_WS_URL
+          value: "wss://ws.vedhavriddhi.com"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+      volumes:
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-logs
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vedhavriddhi-frontend-service
+  labels:
+    app: vedhavriddhi-frontend
+    component: frontend
+spec:
+  selector:
+    app: vedhavriddhi-frontend
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vedhavriddhi-frontend-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "1000"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/gzip-types: "text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript"
+spec:
+  tls:
+  - hosts:
+    - app.vedhavriddhi.com
+    - www.vedhavriddhi.com
+    secretName: frontend-tls
+  rules:
+  - host: app.vedhavriddhi.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: vedhavriddhi-frontend-service
+            port:
+              number: 3000
+  - host: www.vedhavriddhi.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: vedhavriddhi-frontend-service
+            port:
+              number: 3000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: vedhavriddhi-frontend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vedhavriddhi-frontend
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
