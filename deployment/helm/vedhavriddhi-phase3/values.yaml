@@ -1,0 +1,121 @@
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Service configurations
+globalMarketService:
+  enabled: true
+  image:
+    repository: vedhavriddhi/global-market-service
+    tag: 3.0.0
+    pullPolicy: IfNotPresent
+  replicaCount: 3
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+  service:
+    type: ClusterIP
+    port: 8100
+
+fxService:
+  enabled: true
+  image:
+    repository: vedhavriddhi/fx-service
+    tag: 3.0.0
+  replicaCount: 2
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+aiTradingService:
+  enabled: true
+  image:
+    repository: vedhavriddhi/ai-trading-service
+    tag: 3.0.0
+  replicaCount: 2
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+      nvidia.com/gpu: 1
+    limits:
+      memory: "8Gi"
+      cpu: "4000m"
+      nvidia.com/gpu: 1
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 100Gi
+
+voiceTradingService:
+  enabled: true
+  image:
+    repository: vedhavriddhi/voice-trading-service
+    tag: 3.0.0
+  replicaCount: 2
+
+# Database configurations
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "vedhavriddhi123"
+    database: "vedhavriddhi_global"
+  primary:
+    persistence:
+      enabled: true
+      size: 100Gi
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "vedhavriddhi123"
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "1000"
+  hosts:
+    - host: api-global.vedhavriddhi.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: vedhavriddhi-global-market-service
+          port: 8100
+  tls:
+    - secretName: vedhavriddhi-global-tls
+      hosts:
+        - api-global.vedhavriddhi.com
+
+# Monitoring
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
