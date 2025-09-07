@@ -250,3 +250,51 @@ const AppContent: React.FC = () => {
           } />
           
           <Route path="/market
+                    <Route path="/market/*" element={
+            <ProtectedRoute>
+              <MainLayout>
+                <Routes>
+                  <Route index element={<MarketData />} />
+                  <Route path="yield-curves" element={<YieldCurves />} />
+                </Routes>
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin/*" element={
+            <ProtectedRoute>
+              <MainLayout>
+                <Routes>
+                  <Route index element={<Administration />} />
+                </Routes>
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          {/* Catch all route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Box>
+    </Router>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <ErrorBoundary>
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <ApolloProvider client={apolloClient}>
+            <ThemeProvider theme={theme}>
+              <CssBaseline />
+              <AppContent />
+            </ThemeProvider>
+          </ApolloProvider>
+        </QueryClientProvider>
+      </Provider>
+    </ErrorBoundary>
+  );
+};
+
+export default App;
+
