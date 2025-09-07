@@ -1,0 +1,187 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: vedhavriddhi-postgres
+    environment:
+      POSTGRES_DB: vedhavriddhi
+      POSTGRES_USER: vedhavriddhi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vedhavriddhi123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/postgresql/schema:/docker-entrypoint-initdb.d
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vedhavriddhi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ClickHouse for Analytics
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8-alpine
+    container_name: vedhavriddhi-clickhouse
+    environment:
+      CLICKHOUSE_DB: vedhavriddhi_analytics
+      CLICKHOUSE_USER: vedhavriddhi
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-vedhavriddhi123}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./database/clickhouse/schema:/docker-entrypoint-initdb.d
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: vedhavriddhi-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-vedhavriddhi123}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./database/redis/config/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Rust Trading Engine
+  trading-engine:
+    build:
+      context: ./backend/trading-engine
+      dockerfile: Dockerfile
+    container_name: vedhavriddhi-trading-engine
+    environment:
+      RUST_LOG: info
+      DATABASE_URL: postgresql://vedhavriddhi:${POSTGRES_PASSWORD:-vedhavriddhi123}@postgres:5432/vedhavriddhi
+      REDIS_URL: redis://:${REDIS_PASSWORD:-vedhavriddhi123}@redis:6379
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Python Market Data Service
+  market-data-service:
+    build:
+      context: ./backend/market-data-service
+      dockerfile: Dockerfile
+    container_name: vedhavriddhi-market-data
+    environment:
+      DATABASE_URL: postgresql://vedhavriddhi:${POSTGRES_PASSWORD:-vedhavriddhi123}@postgres:5432/vedhavriddhi
+      CLICKHOUSE_URL: http://vedhavriddhi:${CLICKHOUSE_PASSWORD:-vedhavriddhi123}@clickhouse:8123/vedhavriddhi_analytics
+      REDIS_URL: redis://:${REDIS_PASSWORD:-vedhavriddhi123}@redis:6379
+      LOG_LEVEL: INFO
+      PYTHONPATH: /app
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    container_name: vedhavriddhi-api-gateway
+    environment:
+      DATABASE_URL: postgresql://vedhavriddhi:${POSTGRES_PASSWORD:-vedhavriddhi123}@postgres:5432/vedhavriddhi
+      REDIS_URL: redis://:${REDIS_PASSWORD:-vedhavriddhi123}@redis:6379
+      TRADING_ENGINE_URL: http://trading-engine:8080
+      MARKET_DATA_URL: http://market-data-service:8001
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      LOG_LEVEL: INFO
+    ports:
+      - "8002:8002"
+    depends_on:
+      trading-engine:
+        condition: service_healthy
+      market-data-service:
+        condition: service_healthy
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Trading UI
+  trading-ui:
+    build:
+      context: ./frontend/trading-ui
+      dockerfile: Dockerfile
+    container_name: vedhavriddhi-trading-ui
+    environment:
+      REACT_APP_API_URL: http://localhost:8002
+      REACT_APP_WS_URL: ws://localhost:8002
+      REACT_APP_VERSION: 1.0.0
+      NODE_ENV: production
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  clickhouse_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  vedhavriddhi-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
