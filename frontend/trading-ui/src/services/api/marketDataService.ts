@@ -125,3 +125,74 @@ class MarketDataService {
     endDate: string
   ): Promise<Array<{
     date: string;
+        curves: YieldCurveData[];
+  }>> {
+    const response = await this.api.get('/market-data/yield-curve/history', {
+      params: { curve_type: curveType, start_date: startDate, end_date: endDate },
+    });
+    return response.data.data;
+  }
+
+  async getTopMovers(count = 10): Promise<Array<{
+    symbol: string;
+    lastPrice: number;
+    change: number;
+    changePercent: number;
+    volume: number;
+  }>> {
+    const response = await this.api.get('/market-data/movers', {
+      params: { count },
+    });
+    return response.data.data;
+  }
+
+  async getBondCalculations(
+    isin: string,
+    price: number,
+    settlementDate?: string
+  ): Promise<{
+    yieldToMaturity: number;
+    modifiedDuration: number;
+    macaulayDuration: number;
+    convexity: number;
+    accruedInterest: number;
+    cleanPrice: number;
+    dirtyPrice: number;
+  }> {
+    const response = await this.api.post('/market-data/calculations', {
+      isin,
+      price,
+      settlement_date: settlementDate,
+    });
+    return response.data;
+  }
+
+  async getCreditSpreads(rating?: string, sector?: string): Promise<Array<{
+    symbol: string;
+    creditSpread: number;
+    benchmarkYield: number;
+    bondYield: number;
+    rating: string;
+    sector: string;
+  }>> {
+    const response = await this.api.get('/market-data/credit-spreads', {
+      params: { rating, sector },
+    });
+    return response.data.data;
+  }
+
+  async getMarketSummary(): Promise<{
+    totalVolume: number;
+    totalValue: number;
+    activeInstruments: number;
+    avgYield: number;
+    topSectors: Array<{ sector: string; volume: number; value: number }>;
+    yieldCurveMovement: { steepening: boolean; parallelShift: number };
+  }> {
+    const response = await this.api.get('/market-data/summary');
+    return response.data;
+  }
+}
+
+export const marketDataService = new MarketDataService();
+
