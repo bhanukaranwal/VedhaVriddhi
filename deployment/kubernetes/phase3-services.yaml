@@ -1,0 +1,230 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vedhavriddhi-global-market-service
+  labels:
+    app: vedhavriddhi-global-market
+    version: v3.0.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vedhavriddhi-global-market
+  template:
+    metadata:
+      labels:
+        app: vedhavriddhi-global-market
+        version: v3.0.0
+    spec:
+      containers:
+      - name: global-market-service
+        image: vedhavriddhi/global-market-service:3.0.0
+        ports:
+        - containerPort: 8100
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: vedhavriddhi-secrets
+              key: global-market-db-url
+        - name: REDIS_URL
+          value: "redis://redis-service:6379/5"
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8100
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8100
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vedhavriddhi-fx-service
+  labels:
+    app: vedhavriddhi-fx
+    version: v3.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: vedhavriddhi-fx
+  template:
+    metadata:
+      labels:
+        app: vedhavriddhi-fx
+        version: v3.0.0
+    spec:
+      containers:
+      - name: fx-service
+        image: vedhavriddhi/fx-service:3.0.0
+        ports:
+        - containerPort: 8101
+        env:
+        - name: FX_DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: vedhavriddhi-secrets
+              key: fx-db-url
+        - name: REDIS_URL
+          value: "redis://redis-service:6379/6"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8101
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vedhavriddhi-ai-trading-service
+  labels:
+    app: vedhavriddhi-ai-trading
+    version: v3.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: vedhavriddhi-ai-trading
+  template:
+    metadata:
+      labels:
+        app: vedhavriddhi-ai-trading
+        version: v3.0.0
+    spec:
+      containers:
+      - name: ai-trading-service
+        image: vedhavriddhi/ai-trading-service:3.0.0
+        ports:
+        - containerPort: 8102
+        env:
+        - name: AI_DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: vedhavriddhi-secrets
+              key: ai-trading-db-url
+        - name: MODEL_STORAGE_PATH
+          value: "/app/models"
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+            nvidia.com/gpu: 1
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: model-storage
+          mountPath: /app/models
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: ai-models-pvc
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vedhavriddhi-voice-trading-service
+  labels:
+    app: vedhavriddhi-voice-trading
+    version: v3.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: vedhavriddhi-voice-trading
+  template:
+    metadata:
+      labels:
+        app: vedhavriddhi-voice-trading
+        version: v3.0.0
+    spec:
+      containers:
+      - name: voice-trading-service
+        image: vedhavriddhi/voice-trading-service:3.0.0
+        ports:
+        - containerPort: 8104
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+
+---
+# Services
+apiVersion: v1
+kind: Service
+metadata:
+  name: vedhavriddhi-global-market-service
+spec:
+  selector:
+    app: vedhavriddhi-global-market
+  ports:
+  - port: 8100
+    targetPort: 8100
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vedhavriddhi-fx-service
+spec:
+  selector:
+    app: vedhavriddhi-fx
+  ports:
+  - port: 8101
+    targetPort: 8101
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vedhavriddhi-ai-trading-service
+spec:
+  selector:
+    app: vedhavriddhi-ai-trading
+  ports:
+  - port: 8102
+    targetPort: 8102
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vedhavriddhi-voice-trading-service
+spec:
+  selector:
+    app: vedhavriddhi-voice-trading
+  ports:
+  - port: 8104
+    targetPort: 8104
+  type: ClusterIP
