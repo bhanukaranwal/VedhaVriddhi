@@ -1,0 +1,57 @@
+# Istio Service Mesh Security Configuration for VedhaVriddhi
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: vedhavriddhi-mtls
+  namespace: vedhavriddhi-prod
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: vedhavriddhi-authz
+  namespace: vedhavriddhi-prod
+spec:
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/vedhavriddhi-prod/sa/quantum-service"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/quantum/*"]
+  - from:
+    - source:
+        principals: ["cluster.local/ns/vedhavriddhi-prod/sa/agi-service"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/agi/*"]
+  - from:
+    - source:
+        principals: ["cluster.local/ns/vedhavriddhi-prod/sa/consciousness-service"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/consciousness/*"]
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: vedhavriddhi-circuit-breaker
+  namespace: vedhavriddhi-prod
+spec:
+  host: "*.vedhavriddhi-prod.svc.cluster.local"
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 50
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutiveErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
