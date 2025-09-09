@@ -1,0 +1,99 @@
+# deployment/kubernetes/phase4-service-mesh.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vedhavriddhi-phase4
+  labels:
+    istio-injection: enabled
+---
+# Quantum Computing Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quantum-service
+  namespace: vedhavriddhi-phase4
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: quantum-service
+  template:
+    metadata:
+      labels:
+        app: quantum-service
+        version: v4.0.0
+    spec:
+      containers:
+      - name: quantum-service
+        image: vedhavriddhi/quantum-service:4.0.0
+        ports:
+        - containerPort: 8200
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "4"
+            nvidia.com/gpu: 2
+          limits:
+            memory: "16Gi"
+            cpu: "8"
+            nvidia.com/gpu: 4
+        env:
+        - name: QUANTUM_PROVIDERS
+          value: "ibm,google,rigetti"
+        - name: IBM_QUANTUM_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: quantum-secrets
+              key: ibm-token
+---
+# AGI Service
+apiVersion: apps/v1  
+kind: Deployment
+metadata:
+  name: agi-service
+  namespace: vedhavriddhi-phase4
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: agi-service
+  template:
+    metadata:
+      labels:
+        app: agi-service
+        version: v4.0.0
+    spec:
+      containers:
+      - name: agi-service
+        image: vedhavriddhi/agi-service:4.0.0
+        ports:
+        - containerPort: 8201
+        resources:
+          requests:
+            memory: "16Gi" 
+            cpu: "8"
+            nvidia.com/gpu: 4
+          limits:
+            memory: "32Gi"
+            cpu: "16" 
+            nvidia.com/gpu: 8
+---
+# Service Mesh Configuration
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: vedhavriddhi-phase4-gateway
+spec:
+  http:
+  - match:
+    - uri:
+        prefix: /quantum/
+    route:
+    - destination:
+        host: quantum-service
+  - match:
+    - uri:
+        prefix: /agi/
+    route:
+    - destination:
+        host: agi-service
