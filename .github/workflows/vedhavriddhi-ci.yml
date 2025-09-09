@@ -1,0 +1,104 @@
+name: VedhaVriddhi CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: vedhavriddhi
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
+        service: 
+          - quantum-service
+          - agi-service
+          - defi-service
+          - climate-service
+          - neural-service
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-asyncio httpx
+        cd backend/${{ matrix.service }}
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      run: |
+        cd backend/${{ matrix.service }}
+        python -m pytest tests/ -v --tb=short
+        
+    - name: Run security scan
+      run: |
+        pip install bandit safety
+        bandit -r backend/${{ matrix.service }}/ -f json -o bandit-report.json
+        safety check --json --output safety-report.json
+        
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Build and push Docker images
+      run: |
+        for service in quantum-service agi-service defi-service metaverse-service climate-service neural-service; do
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/$service:${{ github.sha }} backend/$service/
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/$service:${{ github.sha }}
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/$service:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/$service:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/$service:latest
+        done
+    
+    - name: Deploy to Kubernetes
+      run: |
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+        kubectl set image deployment/quantum-service quantum-service=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/quantum-service:${{ github.sha }}
+        kubectl set image deployment/agi-service agi-service=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/agi-service:${{ github.sha }}
+        kubectl rollout status deployment/quantum-service
+        kubectl rollout status deployment/agi-service
+
+  performance-test:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run performance tests
+      run: |
+        pip install locust
+        locust -f tests/performance/locustfile.py --host=https://staging-api.vedhavriddhi.ai --users=100 --spawn-rate=10 --run-time=300s --headless --html performance-report.html
+    
+    - name: Upload performance report
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-report
+        path: performance-report.html
