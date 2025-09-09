@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consciousness-service
+  labels:
+    app: consciousness-service
+    version: v4.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: consciousness-service
+  template:
+    metadata:
+      labels:
+        app: consciousness-service
+    spec:
+      containers:
+      - name: consciousness-service
+        image: vedhavriddhi/consciousness-service:4.0.0
+        ports:
+        - containerPort: 8210
+        env:
+        - name: GLOBAL_CONSCIOUSNESS_ENABLED
+          value: "true"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: consciousness_db_url
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8210
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8210
+          initialDelaySeconds: 60
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consciousness-service-svc
+spec:
+  selector:
+    app: consciousness-service
+  ports:
+  - protocol: TCP
+    port: 8210
+    targetPort: 8210
+  type: ClusterIP
