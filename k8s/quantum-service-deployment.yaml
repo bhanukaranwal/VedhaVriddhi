@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quantum-service
+  labels:
+    app: quantum-service
+    version: v4.0.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: quantum-service
+  template:
+    metadata:
+      labels:
+        app: quantum-service
+    spec:
+      containers:
+      - name: quantum-service
+        image: vedhavriddhi/quantum-service:4.0.0
+        ports:
+        - containerPort: 8200
+        env:
+        - name: IBM_QUANTUM_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: quantum-secrets
+              key: ibm_token
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: quantum_db_url
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8200
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8200
+          initialDelaySeconds: 60
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quantum-service-svc
+spec:
+  selector:
+    app: quantum-service
+  ports:
+  - protocol: TCP
+    port: 8200
+    targetPort: 8200
+  type: ClusterIP
