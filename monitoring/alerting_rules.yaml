@@ -1,0 +1,112 @@
+groups:
+- name: vedhavriddhi.critical
+  interval: 30s
+  rules:
+  - alert: SystemHealthCritical
+    expr: vedhavriddhi_system_health_score < 0.3
+    for: 2m
+    labels:
+      severity: critical
+      service: system
+    annotations:
+      summary: "VedhaVriddhi system health is critically low"
+      description: "System health score has dropped to {{ $value }}, immediate intervention required"
+      
+  - alert: PlanetaryHealthDegraded
+    expr: planetary_health_score < 0.4
+    for: 5m
+    labels:
+      severity: critical
+      service: planetary
+    annotations:
+      summary: "Planetary health score below critical threshold"
+      description: "Planetary health has degraded to {{ $value }}, urgent regeneration actions needed"
+      
+  - alert: ConsciousnessEvolutionStalled
+    expr: consciousness_evolution_rate < 0.01
+    for: 10m
+    labels:
+      severity: warning
+      service: consciousness
+    annotations:
+      summary: "Consciousness evolution rate has stalled"
+      description: "Consciousness evolution rate is {{ $value }}, may need intervention"
+
+- name: vedhavriddhi.performance
+  interval: 60s
+  rules:
+  - alert: HighQuantumJobQueue
+    expr: increase(quantum_jobs_total[5m]) > 200
+    for: 3m
+    labels:
+      severity: warning
+      service: quantum
+    annotations:
+      summary: "High quantum job submission rate detected"
+      description: "{{ $value }} quantum jobs submitted in last 5 minutes"
+      
+  - alert: AGIResponseTimeSlow
+    expr: histogram_quantile(0.95, agi_response_time_seconds) > 30
+    for: 5m
+    labels:
+      severity: warning
+      service: agi
+    annotations:
+      summary: "AGI response times are slow"
+      description: "95th percentile response time is {{ $value }}s"
+      
+  - alert: LowAGIAgentCount
+    expr: agi_agents_active < 3
+    for: 5m
+    labels:
+      severity: warning
+      service: agi
+    annotations:
+      summary: "Low number of active AGI agents"
+      description: "Only {{ $value }} AGI agents active, minimum 5 recommended"
+
+- name: vedhavriddhi.security
+  interval: 30s
+  rules:
+  - alert: BiometricAuthenticationFailures
+    expr: increase(biometric_authentications_total{result="failed"}[5m]) > 10
+    for: 2m
+    labels:
+      severity: warning
+      service: security
+    annotations:
+      summary: "High rate of biometric authentication failures"
+      description: "{{ $value }} failed biometric authentications in 5 minutes"
+      
+  - alert: UnusualAPIRequestPattern
+    expr: increase(api_requests_total{status="error"}[1m]) > 50
+    for: 1m
+    labels:
+      severity: critical
+      service: security
+    annotations:
+      summary: "Unusual pattern of API request errors"
+      description: "{{ $value }} API errors in the last minute, possible attack"
+
+- name: vedhavriddhi.business
+  interval: 60s
+  rules:
+  - alert: DeFiTVLDrop
+    expr: decrease(defi_total_value_locked_usd[10m]) > 1000000
+    for: 5m
+    labels:
+      severity: critical
+      service: defi
+    annotations:
+      summary: "Significant drop in DeFi Total Value Locked"
+      description: "TVL dropped by ${{ $value }} in 10 minutes"
+      
+  - alert: CarbonFootprintIncrease
+    expr: increase(carbon_footprint_tons_co2e[1h]) > 100
+    for: 30m
+    labels:
+      severity: warning
+      service: climate
+    annotations:
+      summary: "Carbon footprint increasing rapidly"
+      description: "Carbon footprint increased by {{ $value }} tons CO2e in 1 hour"
