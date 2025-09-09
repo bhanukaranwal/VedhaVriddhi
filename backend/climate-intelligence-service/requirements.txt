@@ -1,0 +1,65 @@
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# Scientific Computing
+numpy==1.24.3
+pandas==2.1.4
+scipy==1.11.4
+
+# Climate and Environmental Data
+xarray==2023.9.0
+netcdf4==1.6.4
+rasterio==1.3.9
+geopandas==0.14.1
+
+# Machine Learning for Climate Modeling
+scikit-learn==1.3.2
+tensorflow==2.13.0
+pytorch==2.1.0
+
+# Database & Storage
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+redis==5.0.1
+sqlalchemy==2.0.23
+
+# HTTP & API Integration
+httpx==0.25.2
+aiohttp==3.9.0
+requests==2.31.0
+
+# Carbon Accounting Libraries
+ghg-protocol==0.1.0
+emission-factors==1.2.0
+
+# Geospatial Analysis
+shapely==2.0.2
+folium==0.15.0
+pyproj==3.6.1
+
+# Time Series Analysis
+statsmodels==0.14.0
+prophet==1.1.4
+
+# Financial Integration
+yfinance==0.2.28
+alpha-vantage==2.3.1
+
+# Configuration Management
+python-dotenv==1.0.0
+pydantic-settings==2.1.0
+
+# Logging & Monitoring
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.11.1
+
+# Utilities
+python-multipart==0.0.6
+python-dateutil==2.8.2
