@@ -1,0 +1,252 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build: ./backend/api-gateway-service
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=production
+      - LOG_LEVEL=info
+    depends_on:
+      - quantum-service
+      - agi-service
+      - defi-service
+      - metaverse-service
+      - climate-service
+      - neural-service
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+
+  # Phase 4 Core Services
+  quantum-service:
+    build: ./backend/quantum-computing-service
+    ports:
+      - "8200:8200"
+    environment:
+      - QUANTUM_BACKEND=qiskit
+      - IBM_QUANTUM_TOKEN=${IBM_QUANTUM_TOKEN}
+    volumes:
+      - quantum-data:/app/data
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  agi-service:
+    build: ./backend/agi-service  
+    ports:
+      - "8201:8201"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - agi-models:/app/models
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  defi-service:
+    build: ./backend/universal-defi-service
+    ports:
+      - "8202:8202" 
+    environment:
+      - WEB3_PROVIDER=${WEB3_PROVIDER}
+      - ETHEREUM_PRIVATE_KEY=${ETHEREUM_PRIVATE_KEY}
+    volumes:
+      - defi-data:/app/data
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  metaverse-service:
+    build: ./backend/metaverse-service
+    ports:
+      - "8203:8203"
+      - "8080:8080"  # WebRTC port
+    environment:
+      - VR_ENABLED=true
+      - SPATIAL_AUDIO=true
+    volumes:
+      - metaverse-assets:/app/assets
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  climate-service:
+    build: ./backend/climate-intelligence-service
+    ports:
+      - "8204:8204"
+    environment:
+      - CARBON_NEGATIVE_TARGET=true
+      - BIODIVERSITY_TRACKING=true
+    volumes:
+      - climate-data:/app/data
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  neural-service:
+    build: ./backend/neural-interface-service
+    ports:
+      - "8205:8205"
+    environment:
+      - BIOMETRIC_AUTH=true
+      - EMOTION_ANALYSIS=true
+    volumes:
+      - neural-data:/app/data
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+
+  # Phase 4 Advanced Services
+  quantum-ml-service:
+    build: ./backend/quantum-ml-service
+    ports:
+      - "8206:8206"
+    environment:
+      - QUANTUM_ML_BACKEND=pennylane
+    volumes:
+      - quantum-ml-models:/app/models
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  orchestration-service:
+    build: ./backend/quantum-orchestration-service
+    ports:
+      - "8207:8207"
+    environment:
+      - MAX_QUANTUM_JOBS=100
+    volumes:
+      - orchestration-data:/app/data
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  coordination-service:
+    build: ./backend/agi-coordination-service
+    ports:
+      - "8208:8208"
+    environment:
+      - SWARM_INTELLIGENCE=true
+    volumes:
+      - coordination-data:/app/data  
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  analytics-service:
+    build: ./backend/multi-dimensional-analytics-service
+    ports:
+      - "8209:8209"
+    environment:
+      - TENSOR_ANALYTICS=true
+      - HYPERGRAPH_PROCESSING=true
+    volumes:
+      - analytics-data:/app/data
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  consciousness-service:
+    build: ./backend/consciousness-gateway-service
+    ports:
+      - "8210:8210"
+    environment:
+      - GLOBAL_CONSCIOUSNESS=true
+      - WISDOM_SYNTHESIS=true
+    volumes:
+      - consciousness-data:/app/data
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  planetary-service:
+    build: ./backend/planetary-impact-service
+    ports:
+      - "8211:8211"
+    environment:
+      - PLANETARY_HEALTH_MONITORING=true
+      - REGENERATION_TRACKING=true
+    volumes:
+      - planetary-data:/app/data
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+
+  # Databases
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=vedhavriddhi
+      - POSTGRES_USER=vedhavriddhi
+      - POSTGRES_PASSWORD=vedhavriddhi123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+    
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=vedhavriddhi123
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - vedhavriddhi-network
+    restart: unless-stopped
+
+volumes:
+  # Phase 4 Service Data
+  quantum-data:
+  agi-models:
+  defi-data:
+  metaverse-assets:
+  climate-data:
+  neural-data:
+  quantum-ml-models:
+  orchestration-data:
+  coordination-data:
+  analytics-data:
+  consciousness-data:
+  planetary-data:
+  
+  # Database Data
+  postgres-data:
+  redis-data:
+  
+  # Monitoring Data
+  prometheus-data:
+  grafana-data:
+
+networks:
+  vedhavriddhi-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
